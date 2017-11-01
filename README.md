@@ -1,8 +1,6 @@
-# Eagerbeaver
+# EagerBeaver
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/eagerbeaver`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Rails `eager_load`, `includes`, `preload` can break when changing table or association names. These breaking changes are often discovered in production due to the tricky nature of testing the existence of all the associations listed in the `includes`. Proper testing is error prone because it requires that all of the listed associations are built during the tests. This gem makes it trivial to test that the associations exist so that you can quickly find the `includes` to fix when refactoring data models.
 
 ## Installation
 
@@ -22,17 +20,53 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+The constructor takes the model as the first parameter and the `includes` array as the second parameter:
+`EagerBeaver.new(MyModel, [:association1, :association2, assoc3: { foo: :bar }])`
 
-## Development
+The instance has one public method, `.errors`, which returns an array of error messages describing unknown associations.
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Imagine we have the following class:
+```ruby
+class Lease < ActiveRecord::Base
+  has_many :lease_terms
+  has_many :spaces, through: :lease_terms
+  belongs_to :tenant
+end
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+with the corresponding controller:
+```ruby
+class LeasesController < ApplicationController
+  def index
+    leases = Lease.all.includes(self.class.lease_includes)
+    # do some stuff
+  end
 
-## Contributing
+  def self.lease_includes
+    [
+      :lease_terms,
+      :spaces,
+      :tenant,
+      :foobar
+    ]
+  end
+end
+```
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/ynnadkrap/eagerbeaver.
+We can ensure that our `lease_includes` is valid by testing it:
+```ruby
+describe LeasesController do
+  describe 'includes' do
+    it 'is valid' do
+      expect(EagerBeaver.new(Lease, LeasesController.lease_includes).errors).to be_empty
+    end
+  end
+end
+```
+
+This expectation would fail, because `.errors` will return `['foobar is not an association of Lease']`.
+
+EagerBeaver works with nested `includes` as well. Check out the specs to see more examples.
 
 ## License
 

@@ -9,8 +9,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Danny Park"]
   spec.email         = ["dannypark92@gmail.com"]
 
-  spec.summary       = "summary"
-  spec.description   = "description"
+  spec.summary       = "Validates associations listed in rails includes"
+  spec.description   = "Validates associations listed in rails includes"
   spec.homepage      = "http://github.com/viewthespace/eagerbeaver"
   spec.license       = "MIT"
 
